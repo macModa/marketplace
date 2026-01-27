@@ -1,7 +1,7 @@
 https://chatgpt.com/share/697901ab-2868-800d-8b56-fcf4eac47f7e
 
 # Marketplace Backend - Spring Boot Application
-
+https://chatgpt.com/gg/v/697903fe500c81a0ab8de082084ccb9a?token=2Rn6pVK-4p9-fR9YbkjE3w
 Backend REST API pour une application marketplace développée avec Spring Boot. Cette API est conçue pour être consommée par une application mobile Flutter.
 
 ## 🏗️ Architecture
