@@ -227,4 +227,9 @@ Développé selon les spécifications du guide de développement Spring Boot mar
 ## 📄 Licence
 
 Ce projet est un projet éducatif.
+///
+Bonus (niveau PFE ⭐)
 
+Dans ton rapport tu peux écrire :
+
+« Afin d’éviter les problèmes de sérialisation liés aux relations JPA et au lazy loading, l’API utilise des DTOs pour l’échange de données avec l’application mobile Flutter. »
