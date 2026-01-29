@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: marketplace-mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: marketplace_db
+      MYSQL_USER: marketplace
+      MYSQL_PASSWORD: marketplace123
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  api:
+    build: .
+    container_name: marketplace-api
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/marketplace_db?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: marketplace
+      SPRING_DATASOURCE_PASSWORD: marketplace123
+      SPRING_PROFILES_ACTIVE: prod
+
+volumes:
+  mysql_data:
