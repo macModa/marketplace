@@ -233,3 +233,66 @@ Bonus (niveau PFE ⭐)
 Dans ton rapport tu peux écrire :
 
 « Afin d’éviter les problèmes de sérialisation liés aux relations JPA et au lazy loading, l’API utilise des DTOs pour l’échange de données avec l’application mobile Flutter. »
+
+
+ Payment Model & Null Safety - Résumé des Correctifs
+🎯 Problèmes Résolus
+Mismatch Enum : Le backend attendait CASH, CARD, etc., mais Flutter envoyait ESPECE, CARTE_BANCAIRE.
+Null Safety : Le backend renvoyait dateModification: null après un POST, causant un crash car Flutter l'attendait non-nullable.
+Inconsistences Provider : Collision entre deux définitions de paymentServiceProvider et mauvaise instanciation de 
+DioClient
+.
+📁 Changements Majeurs
+1️⃣ Refactorisation des Enums (Méthode PRO)
+Tous les enums ont été mis à jour pour utiliser des noms anglais propres avec des mappers pour synchroniser avec le backend Spring Boot.
+
+PaymentMethod
+ : card, mobileMoney, bankTransfer, cash.
+PaymentStatus
+ : pending, completed, failed, refunded.
+OrderStatus
+ : pending, confirmed, etc.
+2️⃣ 
+PaymentDto
+ & Null Safety
+✅ Ajout de dateModification en nullable (String?).
+✅ Utilisation des mappers fromJson/
+toJson
+ personnalisés pour les enums.
+✅ Protection contre les valeurs null pour montant.
+@JsonKey(defaultValue: 0.0)
+final double montant;
+@JsonKey(fromJson: paymentMethodFromString, toJson: paymentMethodToString)
+final PaymentMethod methode;
+final String? dateModification; // ✅ Nullable
+3️⃣ Nettoyage des Providers
+✅ Suppression de 
+payment_service_provider.dart
+ (doublon).
+✅ Centralisation dans 
+payment_providers.dart
+.
+✅ Correction de l'instanciation de 
+DioClient
+ dans 
+dio_provider.dart
+.
+4️⃣ 
+PaymentService
+✅ Injection de dépendance via le constructeur.
+✅ Utilisation de noms de méthodes cohérents (
+getPaymentByOrderId
+).
+🧪 Résultats de la Vérification
+Test	Résultat
+Génération Build	✅ Succès (build_runner)
+Analyse Statique	✅ Zéro Erreur Importante
+Mapping JSON	✅ Stable & Safe
+Sync Backend	✅ Support MAJUSCULES & null
+🚀 Prochaines Étapes
+Hot Restart : Appliquez les changements.
+Test Complet : Effectuez un paiement en choisissant "Espèce" (CASH) ou "Virement".
+Log : Vérifiez que dateModification est bien null dans les logs sans faire crasher l'app.
+L'application est maintenant parfaitement synchronisée avec votre backend Spring Boot ! 🚀
+
+
