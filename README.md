@@ -1,3 +1,21 @@
+Niveau PFE (À écrire dans le rapport)
+
+« Afin d’optimiser la fiabilité des livraisons, un module interne de détection automatique des codes postaux tunisiens a été implémenté. Ce module repose sur une table normalisée et indexée, exposée via une API REST sécurisée, garantissant la cohérence des données entre l’application mobile Flutter et le backend Spring Boot. »
+
+🚀 Option Avancée (Professionnelle)
+
+Si vous voulez du niveau entreprise :
+
+Cache Redis des codes postaux
+
+Normalisation Unicode (suppression accents automatique)
+
+Fuzzy search (Tolérance fautes frappe)
+
+API interne /validate-address
+
+Journalisation des tentatives invalides
+
 https://chatgpt.com/share/697901ab-2868-800d-8b56-fcf4eac47f7e
 
 # Marketplace Backend - Spring Boot Application
