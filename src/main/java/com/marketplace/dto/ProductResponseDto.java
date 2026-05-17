@@ -14,6 +14,7 @@ public class ProductResponseDto {
     private boolean available;
     private String artisanNom;
     private String categoryNom;
+    private String imageUrl;
 
     public ProductResponseDto(
             Long id,
@@ -25,7 +26,8 @@ public class ProductResponseDto {
             Long categoryId,
             boolean available,
             String artisanNom,
-            String categoryNom
+            String categoryNom,
+            String imageUrl
     ) {
         this.id = id;
         this.nom = nom;
@@ -37,6 +39,7 @@ public class ProductResponseDto {
         this.available = available;
         this.artisanNom = artisanNom;
         this.categoryNom = categoryNom;
+        this.imageUrl = imageUrl;
     }
 
     public Long getId() { return id; }
@@ -49,4 +52,5 @@ public class ProductResponseDto {
     public boolean isAvailable() { return available; }
     public String getArtisanNom() { return artisanNom; }
     public String getCategoryNom() { return categoryNom; }
+    public String getImageUrl() { return imageUrl; }
 }

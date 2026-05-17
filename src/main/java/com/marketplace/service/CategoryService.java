@@ -1,6 +1,7 @@
 package com.marketplace.service;
 
 import com.marketplace.dto.CategoryDto;
+import com.marketplace.dto.CategoryResponseDto;
 import com.marketplace.entity.Category;
 import com.marketplace.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,7 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
     
     @Transactional
-    public Category createCategory(CategoryDto categoryDto) {
+    public CategoryResponseDto createCategory(CategoryDto categoryDto) {
         logger.info("Création d'une nouvelle catégorie: {}", categoryDto.getNom());
         
         if (categoryRepository.existsByNom(categoryDto.getNom())) {
@@ -33,20 +34,25 @@ public class CategoryService {
         Category saved = categoryRepository.save(category);
         logger.info("Catégorie créée avec succès: ID {}", saved.getId());
         
-        return saved;
+        return mapToResponseDto(saved);
     }
     
-    public List<Category> getAllCategories() {
-        return categoryRepository.findAll();
+    @Transactional(readOnly = true)
+    public List<CategoryResponseDto> getAllCategories() {
+        return categoryRepository.findAll().stream()
+            .map(this::mapToResponseDto)
+            .toList();
     }
     
-    public Category getCategoryById(Long id) {
+    @Transactional(readOnly = true)
+    public CategoryResponseDto getCategoryById(Long id) {
         return categoryRepository.findById(id)
+            .map(this::mapToResponseDto)
             .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée: " + id));
     }
     
     @Transactional
-    public Category updateCategory(Long id, CategoryDto categoryDto) {
+    public CategoryResponseDto updateCategory(Long id, CategoryDto categoryDto) {
         logger.info("Mise à jour de la catégorie: {}", id);
         
         Category category = categoryRepository.findById(id)
@@ -58,8 +64,9 @@ public class CategoryService {
         }
         
         category.setNom(categoryDto.getNom());
+        Category updated = categoryRepository.save(category);
         
-        return categoryRepository.save(category);
+        return mapToResponseDto(updated);
     }
     
     @Transactional
@@ -69,12 +76,21 @@ public class CategoryService {
         Category category = categoryRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée: " + id));
         
-        if (category.getProductCount() > 0) {
+        // Accès à products.size() dans une méthode @Transactional
+        if (category.getProducts() != null && !category.getProducts().isEmpty()) {
             throw new IllegalStateException("Impossible de supprimer une catégorie contenant des produits");
         }
         
         categoryRepository.delete(category);
         logger.info("Catégorie supprimée avec succès: {}", id);
+    }
+
+    private CategoryResponseDto mapToResponseDto(Category category) {
+        return new CategoryResponseDto(
+            category.getId(),
+            category.getNom(),
+            category.getProducts() != null ? category.getProducts().size() : 0
+        );
     }
 }
 

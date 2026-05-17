@@ -1,6 +1,8 @@
 package com.marketplace.entity;
 
 import com.marketplace.enums.OrderStatus;
+import com.marketplace.enums.PaymentMethod;
+import com.marketplace.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -40,9 +42,31 @@ public class Order {
     
     private LocalDateTime dateModification;
     
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private PaymentMethod paymentMethod;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
+    
+    private LocalDateTime paidAt;
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "artisan_id")
+    private Artisan artisan;
+
+    @Column(unique = true)
+    private String deliveryToken;
+
+    private LocalDateTime deliveryTokenExpiry;
+
+    @Column(unique = true)
+    private String trackingNumber;
     
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<OrderLine> orderLines = new ArrayList<>();

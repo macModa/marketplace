@@ -1,26 +1,12 @@
 spring:
-  datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/marketplace_db?useSSL=true&serverTimezone=UTC}
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:}
-  
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
 
 jwt:
-  secret: ${JWT_SECRET:}
+  secret: ${JWT_SECRET:mySecretKeyForJWTTokenGenerationThatShouldBeAtLeast256BitsLongForProductionUse}
   expiration: ${JWT_EXPIRATION:86400000}
-
-logging:
-  level:
-    root: WARN
-    com.marketplace: INFO
-    org.springframework.security: WARN
-  file:
-    name: /var/log/marketplace/application.log
 
 server:
   port: ${PORT:8080}
-

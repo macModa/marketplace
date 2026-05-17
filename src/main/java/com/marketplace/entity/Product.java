@@ -1,5 +1,4 @@
 package com.marketplace.entity;
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,6 +8,7 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "products", indexes = {
@@ -39,17 +39,30 @@ public class Product {
     @Column(nullable = false)
     private Integer stock = 0;
     
+    @Column(name = "poids_kg", precision = 10, scale = 3)
+    private BigDecimal poidsKg;
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "artisan_id", nullable = false)
+    @JsonIgnore
     private Artisan artisan;
-    
+
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
+    @JsonIgnore
     private Category category;
-    
+
+    @Column(name = "image_url")
+    private String imageUrl;
+
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<OrderLine> orderLines = new ArrayList<>();
-    
+
+
+
+
     // Business methods
     public boolean isAvailable() {
         return stock > 0;

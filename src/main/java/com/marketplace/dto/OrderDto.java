@@ -25,5 +25,9 @@ public class OrderDto {
     private String clientNom;
     private List<OrderLineDto> orderLines = new ArrayList<>();
     private PaymentDto payment;
+    private String paymentMethod;
+    private String paymentStatus;
+    private String deliveryToken;
+    private String trackingNumber;  // Added: Tracking number from associated Parcel
 }
 

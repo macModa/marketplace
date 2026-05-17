@@ -14,11 +14,14 @@ import java.util.List;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
     
-    Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
+    // JOIN FETCH prevents LazyInitializationException when open-in-view=false
+    @Query("SELECT p FROM Product p JOIN FETCH p.artisan JOIN FETCH p.category WHERE p.category.id = :categoryId")
+    Page<Product> findByCategoryId(@Param("categoryId") Long categoryId, Pageable pageable);
     
-    Page<Product> findByArtisanId(Long artisanId, Pageable pageable);
+    @Query("SELECT p FROM Product p JOIN FETCH p.artisan JOIN FETCH p.category WHERE p.artisan.id = :artisanId")
+    Page<Product> findByArtisanId(@Param("artisanId") Long artisanId, Pageable pageable);
     
-    @Query("SELECT p FROM Product p WHERE p.stock > 0")
+    @Query("SELECT p FROM Product p JOIN FETCH p.artisan JOIN FETCH p.category WHERE p.stock > 0")
     Page<Product> findAvailableProducts(Pageable pageable);
     
     @Query("SELECT p FROM Product p WHERE p.stock = 0")

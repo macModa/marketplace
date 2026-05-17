@@ -16,6 +16,8 @@ import java.util.List;
 @AllArgsConstructor
 public class CreateOrderRequest {
     
+    private String paymentMethod;
+    
     @NotEmpty(message = "La commande doit contenir au moins un produit")
     @Valid
     private List<OrderLineDto> orderLines = new ArrayList<>();

@@ -39,5 +39,6 @@ public class ProductDto {
     
     private String artisanNom;
     private String categoryNom;
+    private String imageUrl;
 }
 

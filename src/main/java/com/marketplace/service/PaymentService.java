@@ -1,6 +1,8 @@
 package com.marketplace.service;
 
+import com.marketplace.delivery.event.OrderPaidEvent;
 import com.marketplace.dto.CreatePaymentRequest;
+import com.marketplace.entity.Client;
 import com.marketplace.entity.Order;
 import com.marketplace.entity.Payment;
 import com.marketplace.enums.PaymentStatus;
@@ -9,9 +11,11 @@ import com.marketplace.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -22,6 +26,7 @@ public class PaymentService {
     
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final ApplicationEventPublisher eventPublisher;
     
     @Transactional
     public Payment createPayment(Long orderId, CreatePaymentRequest request) {
@@ -68,6 +73,10 @@ public class PaymentService {
         
         Payment saved = paymentRepository.save(payment);
         logger.info("Paiement complété avec succès: {}", paymentId);
+        
+        // Publish event so DeliveryService can create the parcel automatically
+        // This event is consumed AFTER this transaction commits (TransactionPhase.AFTER_COMMIT)
+        publishOrderPaidEvent(order);
         
         return saved;
     }
@@ -118,6 +127,59 @@ public class PaymentService {
     
     private String generateReference() {
         return "PAY-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    /**
+     * Build and publish OrderPaidEvent.
+     * DeliveryService is NOT imported here — fully decoupled via Spring events.
+     *
+     * Postal code extraction: reads the last 4 digits from adresseLivraison.
+     * In production, add a dedicated postalCode column to the Client entity.
+     */
+    private void publishOrderPaidEvent(Order order) {
+        Client client = order.getClient();
+        if (client == null) {
+            logger.warn("Cannot publish OrderPaidEvent: no client on order {}", order.getId());
+            return;
+        }
+
+        String deliveryAddress = client.getAdresseLivraison() != null
+                ? client.getAdresseLivraison() : "";
+
+        // Extract postal code: expect last 4 chars of address to be digits (e.g. "Av. Habib Bourguiba 7000")
+        String postalCode = extractPostalCode(deliveryAddress);
+        if (postalCode == null) {
+            logger.warn("No valid 4-digit postal code found in address '{}' for order {}. " +
+                    "Defaulting to 1000 (Grand Tunis). " +
+                    "Consider adding a dedicated postalCode field to Client.", deliveryAddress, order.getId());
+            postalCode = "1000";  // safe default — Grand Tunis
+        }
+
+        String recipientName = client.getNom();
+        OrderPaidEvent event = new OrderPaidEvent(
+                this,
+                order.getId(),
+                recipientName,
+                client.getTelephone() != null ? client.getTelephone() : "",
+                deliveryAddress,
+                postalCode,
+                order.getTotal()
+        );
+
+        eventPublisher.publishEvent(event);
+        logger.info("OrderPaidEvent published for order {} (postalCode: {})", order.getId(), postalCode);
+    }
+
+    /**
+     * Extract a 4-digit Tunisian postal code from an address string.
+     * Looks for any sequence of exactly 4 digits in the address.
+     */
+    private String extractPostalCode(String address) {
+        if (address == null || address.isBlank()) return null;
+        // Match any standalone 4-digit group
+        java.util.regex.Matcher matcher =
+                java.util.regex.Pattern.compile("\\b(\\d{4})\\b").matcher(address);
+        return matcher.find() ? matcher.group(1) : null;
     }
 }
 

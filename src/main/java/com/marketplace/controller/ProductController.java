@@ -138,7 +138,18 @@ public class ProductController {
             Authentication authentication
     ) {
         User user = (User) authentication.getPrincipal();
+
+        logger.info("=== CREATE PRODUCT DEBUG ===");
+        logger.info("Received imageUrl: {}", productDto.getImageUrl());
+        logger.info("Received nom: {}", productDto.getNom());
+        logger.info("Received categoryId: {}", productDto.getCategoryId());
+        logger.info("Received artisanId from DTO: {}", productDto.getArtisanId());
+        logger.info("User ID from auth: {}", user.getId());
+        logger.info("=============================");
+
         Product product = productService.createProduct(productDto, user.getId());
+
+        logger.info("Saved product imageUrl: {}", product.getImageUrl());
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(
@@ -158,7 +169,15 @@ public class ProductController {
             Authentication authentication
     ) {
         User user = (User) authentication.getPrincipal();
+
+        logger.info("=== UPDATE PRODUCT DEBUG ===");
+        logger.info("Product ID: {}", id);
+        logger.info("Received imageUrl: {}", productDto.getImageUrl());
+        logger.info("=============================");
+
         Product product = productService.updateProduct(id, productDto, user.getId());
+
+        logger.info("Updated product imageUrl: {}", product.getImageUrl());
 
         return ResponseEntity.ok(
                 ApiResponse.success(

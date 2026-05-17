@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,11 +26,12 @@ public class Category {
     
     @Column(nullable = false, unique = true, length = 100)
     private String nom;
-    
-    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+
+    @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Product> products = new ArrayList<>();
-    
-    // Business methods
+
+    // Helper methods (gestion de la cohérence bidirectionnelle)
     public void addProduct(Product product) {
         products.add(product);
         product.setCategory(this);
@@ -39,9 +41,10 @@ public class Category {
         products.remove(product);
         product.setCategory(null);
     }
-    
-    public int getProductCount() {
-        return products != null ? products.size() : 0;
-    }
+
+    // NOTE: getProductCount() supprimé intentionnellement.
+    // Accéder à products.size() depuis un getter appelé par Jackson provoque
+    // une LazyInitializationException si la session Hibernate est fermée.
+    // → Le comptage est effectué dans CategoryService, dans une méthode @Transactional.
 }
 

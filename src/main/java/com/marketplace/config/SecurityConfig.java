@@ -13,7 +13,6 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,42 +33,29 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
 
-    /**
-     * ✅ IGNORER COMPLÈTEMENT LES REQUÊTES PREFLIGHT (OPTIONS)
-     */
-
-    @Bean
-    public WebSecurityCustomizer webSecurityCustomizer() {
-        return web -> web.ignoring()
-                .requestMatchers(HttpMethod.OPTIONS, "/**");
-    }
-
-    /**
-     * ✅ CONFIGURATION CORS (OBLIGATOIRE POUR FLUTTER WEB)
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of(
-                "http://localhost:52019",
-                "http://127.0.0.1:52019"
-        ));
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:*",
-                "http://127.0.0.1:*"
+                "http://127.0.0.1:*",
+                "http://192.168.0.56:*",
+                "https://*.railway.app",
+                "https://*.up.railway.app"
         ));
+
         config.setAllowedMethods(List.of(
-                "GET", "POST", "PUT", "DELETE", "OPTIONS"
+                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
         ));
 
         config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Content-Disposition", "Authorization"));
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-
         return source;
     }
 
@@ -93,27 +79,42 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
-    /**
-     * ✅ FILTRE DE SÉCURITÉ PRINCIPAL
-     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-		 .cors(cors -> cors.disable()) 
-               // .cors(cors -> {}) // 🔥 active corsConfigurationSource
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // Public
+
+                        // ✅ OPTIONS preflight
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // ─── PUBLIC ───────────────────────────────────────────────
+                        .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/products/**").permitAll()
                         .requestMatchers("/api/categories/**").permitAll()
+                        .requestMatchers("/error").permitAll()
 
-                        // Protected
-                        .requestMatchers("/api/orders/**").hasAnyRole("CLIENT", "ADMIN")
-                        .requestMatchers("/api/payments/**").hasAnyRole("CLIENT", "ADMIN")
+                        // ─── QR DELIVERY ──────────────────────────────────────────
+                        // ✅ Public: Flutter delivery agent scans QR — auth is the token in the body
+                        .requestMatchers(HttpMethod.POST, "/api/v1/delivery/qr/confirm").permitAll()
+                        // Protected: only admin/driver/artisan can generate or regenerate QR
+                        .requestMatchers(HttpMethod.GET,  "/api/v1/delivery/qr/**").hasAnyRole("ADMIN", "DRIVER", "ARTISAN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/delivery/qr/regenerate/**").hasRole("ADMIN")
+
+                        // ─── ORDERS ───────────────────────────────────────────────
+                        .requestMatchers(HttpMethod.POST, "/api/orders").hasAnyRole("CLIENT", "ADMIN")
+                        .requestMatchers("/api/orders/*/delivery-note").hasRole("ARTISAN")
+                        .requestMatchers("/api/orders/*/artisan-status").hasRole("ARTISAN")
+                        .requestMatchers("/api/orders/confirm-delivery-qr").hasRole("CLIENT")
+                        .requestMatchers("/api/orders/**").hasAnyRole("CLIENT", "ADMIN", "ARTISAN")
+
+                        // ─── OTHER PROTECTED ──────────────────────────────────────
+                        .requestMatchers("/api/payments/**").hasAnyRole("CLIENT", "ADMIN", "ARTISAN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                         .anyRequest().authenticated()
@@ -129,9 +130,6 @@ public class SecurityConfig {
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(
-                jwtTokenProvider,
-                userDetailsService
-        );
+        return new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService);
     }
 }
