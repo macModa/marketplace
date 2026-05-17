@@ -314,3 +314,37 @@ Log : Vérifiez que dateModification est bien null dans les logs sans faire cras
 L'application est maintenant parfaitement synchronisée avec votre backend Spring Boot ! 🚀
 
 
+Walkthrough - Secure Delivery Note System
+I have successfully implemented the secure delivery note system for the Tunisian artisan marketplace.
+
+Changes Made
+Backend (Spring Boot)
+DeliveryService Refactor:
+Now uses BonLivraisonDTO as the single source of truth.
+Implemented a professional CP1-style PDF layout including:
+Structured Sender/Receiver boxes.
+Detailed product table with weights.
+COD amount in French words (e.g., "Cent quarante-cinq dinars et cinq cents millimes").
+Secure QR code for delivery validation.
+Signature areas for the client.
+OrderController & ArtisanOrderController:
+Integrated BonLivraisonService to assemble complete data before PDF generation.
+Enforced strict ownership checks (Artisan-only access).
+Unified the delivery token lifecycle.
+Frontend (Flutter)
+ClientScanScreen:
+Implemented a robust QR code parser that handles both absolute URLs and relative paths.
+Added comprehensive error handling and user feedback (SnackBars, Dialogs).
+BonLivraisonScreen:
+Polished the preview UI to match the marketplace theme.
+Verification Results
+Backend
+✅ mvn compile successful.
+✅ Logic verified for ownership and token expiration.
+Frontend
+✅ flutter analyze verified (no issues in the modified features).
+✅ UI verified for responsive layout and loading states.
+Security Overview
+Artisan: Can generate the official document for their orders.
+Client: Can validate the physical receipt by scanning the QR code.
+Backend Enforcement: Validates that the scanner is the actual client of the order.
