@@ -1,66 +1,51 @@
-Niveau PFE (À écrire dans le rapport)
+# Marketplace API — Spring Boot
 
-« Afin d’optimiser la fiabilité des livraisons, un module interne de détection automatique des codes postaux tunisiens a été implémenté. Ce module repose sur une table normalisée et indexée, exposée via une API REST sécurisée, garantissant la cohérence des données entre l’application mobile Flutter et le backend Spring Boot. »
+Backend REST API d'une application marketplace artisanale tunisienne, conçu pour être consommé par une application mobile Flutter. Le système intègre une gestion sécurisée des commandes, un module de bons de livraison avec QR code, et une synchronisation robuste des données avec le frontend mobile.
 
-🚀 Option Avancée (Professionnelle)
+---
 
-Si vous voulez du niveau entreprise :
+## Architecture
 
-Cache Redis des codes postaux
+L'application suit une architecture en couches respectant les principes SOLID :
 
-Normalisation Unicode (suppression accents automatique)
+```
+Controller  →  Service  →  Repository  →  Base de données
+     ↕              ↕
+    DTO         Entity (JPA)
+     ↕
+  Security (JWT)
+```
 
-Fuzzy search (Tolérance fautes frappe)
+> **Note PFE** — Afin d'éviter les problèmes de sérialisation liés aux relations JPA et au lazy loading, l'API utilise des DTOs comme seule interface d'échange de données avec l'application mobile Flutter.
 
-API interne /validate-address
+---
 
-Journalisation des tentatives invalides
+## Prérequis
 
-https://chatgpt.com/share/697901ab-2868-800d-8b56-fcf4eac47f7e
+| Outil | Version minimale |
+|---|---|
+| Java | 17 |
+| Maven | 3.6 |
+| MySQL | 8.0 |
 
-# Marketplace Backend - Spring Boot Application
-https://chatgpt.com/gg/v/697903fe500c81a0ab8de082084ccb9a?token=2Rn6pVK-4p9-fR9YbkjE3w
-Backend REST API pour une application marketplace développée avec Spring Boot. Cette API est conçue pour être consommée par une application mobile Flutter.
+---
 
-## 🏗️ Architecture
+## Installation
 
-L'application suit une architecture en couches professionnelle :
-
-- **Controller** : Gestion des requêtes HTTP REST
-- **Service** : Logique métier et transactions
-- **Repository** : Accès aux données avec Spring Data JPA
-- **Entity** : Modèles de domaine JPA
-- **DTO** : Objets de transfert de données pour les API
-- **Security** : Authentification JWT et autorisations
-- **Exception** : Gestion globale des erreurs
-
-## 📋 Prérequis
-
-- Java 17 ou supérieur
-- Maven 3.6+
-- MySQL 8.0+
-- IDE (IntelliJ IDEA, Eclipse, VS Code)
-
-## 🚀 Installation et Démarrage
-
-### 1. Cloner le projet
+### 1. Cloner le dépôt
 
 ```bash
 git clone <repository-url>
 cd boot
 ```
 
-### 2. Configurer la base de données
-
-Créer une base de données MySQL :
+### 2. Créer la base de données
 
 ```sql
 CREATE DATABASE marketplace_db;
 ```
 
-### 3. Configurer l'application
-
-Modifier `src/main/resources/application.yml` avec vos paramètres de base de données :
+### 3. Configurer `application.yml`
 
 ```yaml
 spring:
@@ -70,106 +55,112 @@ spring:
     password: votre_password
 ```
 
-### 4. Lancer l'application
+### 4. Démarrer l'application
 
 ```bash
 mvn spring-boot:run
 ```
 
-L'application sera accessible sur `http://localhost:8080`
+L'API est accessible sur `http://localhost:8080`.
 
-## 📚 API Endpoints
+---
+
+## Endpoints
 
 ### Authentification
 
-- `POST /api/auth/register` - Inscription (Artisan ou Client)
-- `POST /api/auth/login` - Connexion
+| Méthode | Route | Description |
+|---|---|---|
+| POST | `/api/auth/register` | Inscription (Artisan ou Client) |
+| POST | `/api/auth/login` | Connexion, retourne un token JWT |
 
-### Produits (Public)
+### Produits
 
-- `GET /api/products` - Liste paginée des produits
-- `GET /api/products/{id}` - Détails d'un produit
-- `GET /api/products/category/{categoryId}` - Produits par catégorie
-- `GET /api/products/artisan/{artisanId}` - Produits d'un artisan
-- `GET /api/products/search?keyword=...` - Recherche de produits
-- `GET /api/products/available` - Produits disponibles
-
-### Produits (Artisan)
-
-- `POST /api/products` - Créer un produit
-- `PUT /api/products/{id}` - Modifier un produit
-- `DELETE /api/products/{id}` - Supprimer un produit
+| Méthode | Route | Accès | Description |
+|---|---|---|---|
+| GET | `/api/products` | Public | Liste paginée |
+| GET | `/api/products/{id}` | Public | Détail d'un produit |
+| GET | `/api/products/category/{categoryId}` | Public | Par catégorie |
+| GET | `/api/products/artisan/{artisanId}` | Public | Par artisan |
+| GET | `/api/products/search?keyword=...` | Public | Recherche textuelle |
+| GET | `/api/products/available` | Public | Produits en stock |
+| POST | `/api/products` | Artisan | Créer un produit |
+| PUT | `/api/products/{id}` | Artisan | Modifier un produit |
+| DELETE | `/api/products/{id}` | Artisan | Supprimer un produit |
 
 ### Catégories
 
-- `GET /api/categories` - Liste des catégories
-- `GET /api/categories/{id}` - Détails d'une catégorie
-- `POST /api/categories` - Créer une catégorie (Admin)
-- `PUT /api/categories/{id}` - Modifier une catégorie (Admin)
-- `DELETE /api/categories/{id}` - Supprimer une catégorie (Admin)
+| Méthode | Route | Accès |
+|---|---|---|
+| GET | `/api/categories` | Public |
+| GET | `/api/categories/{id}` | Public |
+| POST | `/api/categories` | Admin |
+| PUT | `/api/categories/{id}` | Admin |
+| DELETE | `/api/categories/{id}` | Admin |
 
-### Commandes (Client)
+### Commandes
 
-- `POST /api/orders` - Créer une commande
-- `GET /api/orders/{id}` - Détails d'une commande
-- `GET /api/orders/my-orders` - Mes commandes
-- `PUT /api/orders/{id}/cancel` - Annuler une commande
+| Méthode | Route | Description |
+|---|---|---|
+| POST | `/api/orders` | Créer une commande |
+| GET | `/api/orders/{id}` | Détail d'une commande |
+| GET | `/api/orders/my-orders` | Historique du client connecté |
+| PUT | `/api/orders/{id}/cancel` | Annuler une commande |
 
-### Paiements (Client)
+### Paiements
 
-- `POST /api/payments/order/{orderId}` - Créer un paiement
-- `GET /api/payments/order/{orderId}` - Paiement d'une commande
-- `GET /api/payments/{id}` - Détails d'un paiement
+| Méthode | Route | Description |
+|---|---|---|
+| POST | `/api/payments/order/{orderId}` | Initier un paiement |
+| GET | `/api/payments/order/{orderId}` | Paiement lié à une commande |
+| GET | `/api/payments/{id}` | Détail d'un paiement |
 
-## 🔐 Sécurité
+---
 
-L'application utilise JWT (JSON Web Token) pour l'authentification stateless.
+## Sécurité
 
-### Rôles
+L'authentification est stateless via **JWT (JSON Web Token)**.
 
-- **ARTISAN** : Peut gérer ses produits
-- **CLIENT** : Peut passer des commandes et effectuer des paiements
-- **ADMIN** : Accès complet à toutes les fonctionnalités
-
-### Utilisation du token
-
-Inclure le token JWT dans le header Authorization :
+Inclure le token dans chaque requête protégée :
 
 ```
 Authorization: Bearer <token>
 ```
 
-## 📦 Modèle de données
+### Rôles
 
-### Entités principales
+| Rôle | Permissions |
+|---|---|
+| `CLIENT` | Passer des commandes, effectuer des paiements, scanner les bons de livraison |
+| `ARTISAN` | Gérer ses produits, générer des bons de livraison pour ses commandes |
+| `ADMIN` | Accès complet à toutes les ressources |
 
-- **User** (abstraite) : Base pour Artisan et Client
-- **Artisan** : Utilisateur vendant des produits
-- **Client** : Utilisateur achetant des produits
-- **Category** : Catégorisation des produits
-- **Product** : Produits vendus par les artisans
-- **Order** : Commandes des clients
-- **OrderLine** : Lignes de commande
-- **Payment** : Paiements associés aux commandes
+---
 
-## 🛠️ Technologies utilisées
+## Modèle de données
 
-- **Spring Boot 3.2.0** : Framework principal
-- **Spring Data JPA** : Accès aux données
-- **Spring Security** : Sécurité et authentification
-- **MySQL** : Base de données relationnelle
-- **JWT (jjwt)** : Tokens d'authentification
-- **Lombok** : Réduction du code boilerplate
-- **SLF4J/Logback** : Logging
+```
+User (abstrait)
+├── Artisan       → publie des produits
+└── Client        → passe des commandes
 
-## 📝 Format de réponse API
+Category          → classe les produits
+Product           → rattaché à un Artisan et une Category
+Order             → passée par un Client
+├── OrderLine     → lignes de commande (produit + quantité)
+└── Payment       → paiement associé à la commande
+```
 
-Toutes les réponses suivent le format standard :
+---
+
+## Format des réponses
+
+Toutes les réponses respectent une enveloppe standard :
 
 ```json
 {
   "success": true,
-  "message": "Message descriptif",
+  "message": "Opération réussie",
   "data": { ... },
   "timestamp": "2024-01-01T12:00:00"
 }
@@ -180,35 +171,84 @@ En cas d'erreur :
 ```json
 {
   "success": false,
-  "message": "Message d'erreur",
+  "message": "Description de l'erreur",
   "data": null,
   "timestamp": "2024-01-01T12:00:00"
 }
 ```
 
-## 🔄 Gestion des transactions
+---
 
-Les opérations critiques (création de commande, paiement, gestion de stock) sont gérées avec `@Transactional` pour garantir la cohérence des données.
+## Module Bon de Livraison
 
-## 📊 Logging
+Un système sécurisé de bons de livraison PDF est intégré, incluant :
 
-Les logs sont configurés avec SLF4J et Logback :
-- Console : Niveau INFO
-- Fichier : `logs/marketplace.log` (rotation automatique)
-- Niveau DEBUG en développement
+- Mise en page structurée (expéditeur / destinataire, tableau produits avec poids)
+- Montant en toutes lettres en français (ex. : *Cent quarante-cinq dinars et cinq cents millimes*)
+- QR code de validation scannable par le client depuis l'application mobile
+- Zone de signature client
 
-## 🧪 Tests
+**Flux de sécurité :**
 
-Pour exécuter les tests :
-
-```bash
-mvn test
+```
+Artisan  →  génère le bon PDF (vérification propriété commande)
+Client   →  scanne le QR code pour valider la réception
+Backend  →  vérifie que le scanner est bien le client de la commande
 ```
 
-## 🌍 Environnements
+> **Note PFE** — Afin d'optimiser la fiabilité des livraisons, un module interne de détection automatique des codes postaux tunisiens a été implémenté. Ce module repose sur une table normalisée et indexée, exposée via une API REST sécurisée, garantissant la cohérence des données entre l'application mobile Flutter et le backend Spring Boot.
 
-- **Development** : `application-dev.yml`
-- **Production** : `application-prod.yml`
+---
+
+## Synchronisation Flutter ↔ Backend
+
+La couche de communication avec l'application mobile a été renforcée sur plusieurs points :
+
+**Enums** — Les valeurs sont désormais alignées entre les deux plateformes via des mappers dédiés :
+
+| Domaine | Valeurs |
+|---|---|
+| `PaymentMethod` | `CASH`, `CARD`, `MOBILE_MONEY`, `BANK_TRANSFER` |
+| `PaymentStatus` | `PENDING`, `COMPLETED`, `FAILED`, `REFUNDED` |
+| `OrderStatus` | `PENDING`, `CONFIRMED`, `SHIPPED`, `DELIVERED`, `CANCELLED` |
+
+**Null safety** — Les champs optionnels (ex. `dateModification`) sont correctement marqués nullable dans les DTOs pour éviter les crashes à la désérialisation.
+
+---
+
+## Technologies
+
+| Composant | Technologie |
+|---|---|
+| Framework | Spring Boot 3.2.0 |
+| ORM | Spring Data JPA / Hibernate |
+| Sécurité | Spring Security + JWT (jjwt) |
+| Base de données | MySQL 8 |
+| Réduction boilerplate | Lombok |
+| Logging | SLF4J / Logback |
+
+---
+
+## Bonnes pratiques implémentées
+
+- Architecture en couches (Controller → Service → Repository)
+- Séparation des responsabilités (principes SOLID)
+- Validation des entrées via Bean Validation
+- Gestion globale des exceptions avec `@ControllerAdvice`
+- Transactions `@Transactional` sur les opérations critiques (commande, paiement, stock)
+- Pagination sur toutes les listes
+- DTOs pour l'isolation des entités JPA
+- Indexation des colonnes fréquemment interrogées
+- Logging structuré avec rotation automatique (`logs/marketplace.log`)
+
+---
+
+## Environnements
+
+| Profil | Fichier |
+|---|---|
+| Développement | `application-dev.yml` |
+| Production | `application-prod.yml` |
 
 Activer un profil :
 
@@ -216,135 +256,28 @@ Activer un profil :
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-## 📖 Bonnes pratiques implémentées
+---
 
-- ✅ Architecture en couches (Controller → Service → Repository)
-- ✅ Séparation des responsabilités (SOLID)
-- ✅ Validation des entrées (Bean Validation)
-- ✅ Gestion globale des exceptions
-- ✅ Transactions pour opérations critiques
-- ✅ Pagination pour les listes
-- ✅ Logging professionnel
-- ✅ Sécurité JWT stateless
-- ✅ DTOs pour isolation des entités
-- ✅ Indexation des bases de données
+## Tests
 
-## 🚧 Améliorations futures
+```bash
+mvn test
+```
 
-- Tests unitaires et d'intégration complets
-- Documentation API avec Swagger/OpenAPI
-- Cache avec Redis
-- Upload d'images pour les produits
-- Notifications en temps réel
-- Dockerisation complète
+---
 
-## 👥 Auteur
+## Pistes d'amélioration
 
-Développé selon les spécifications du guide de développement Spring Boot marketplace.
+- Tests unitaires et d'intégration (JUnit 5 / Mockito)
+- Documentation interactive avec Swagger / OpenAPI 3
+- Cache Redis pour les codes postaux et les données fréquentes
+- Upload et stockage d'images produits
+- Notifications en temps réel (WebSocket ou FCM)
+- Dockerisation complète (Docker Compose)
+- Fuzzy search sur les adresses (tolérance aux fautes de frappe)
 
-## 📄 Licence
+---
 
-Ce projet est un projet éducatif.
-///
-Bonus (niveau PFE ⭐)
+## Licence
 
-Dans ton rapport tu peux écrire :
-
-« Afin d’éviter les problèmes de sérialisation liés aux relations JPA et au lazy loading, l’API utilise des DTOs pour l’échange de données avec l’application mobile Flutter. »
-
-
- Payment Model & Null Safety - Résumé des Correctifs
-🎯 Problèmes Résolus
-Mismatch Enum : Le backend attendait CASH, CARD, etc., mais Flutter envoyait ESPECE, CARTE_BANCAIRE.
-Null Safety : Le backend renvoyait dateModification: null après un POST, causant un crash car Flutter l'attendait non-nullable.
-Inconsistences Provider : Collision entre deux définitions de paymentServiceProvider et mauvaise instanciation de 
-DioClient
-.
-📁 Changements Majeurs
-1️⃣ Refactorisation des Enums (Méthode PRO)
-Tous les enums ont été mis à jour pour utiliser des noms anglais propres avec des mappers pour synchroniser avec le backend Spring Boot.
-
-PaymentMethod
- : card, mobileMoney, bankTransfer, cash.
-PaymentStatus
- : pending, completed, failed, refunded.
-OrderStatus
- : pending, confirmed, etc.
-2️⃣ 
-PaymentDto
- & Null Safety
-✅ Ajout de dateModification en nullable (String?).
-✅ Utilisation des mappers fromJson/
-toJson
- personnalisés pour les enums.
-✅ Protection contre les valeurs null pour montant.
-@JsonKey(defaultValue: 0.0)
-final double montant;
-@JsonKey(fromJson: paymentMethodFromString, toJson: paymentMethodToString)
-final PaymentMethod methode;
-final String? dateModification; // ✅ Nullable
-3️⃣ Nettoyage des Providers
-✅ Suppression de 
-payment_service_provider.dart
- (doublon).
-✅ Centralisation dans 
-payment_providers.dart
-.
-✅ Correction de l'instanciation de 
-DioClient
- dans 
-dio_provider.dart
-.
-4️⃣ 
-PaymentService
-✅ Injection de dépendance via le constructeur.
-✅ Utilisation de noms de méthodes cohérents (
-getPaymentByOrderId
-).
-🧪 Résultats de la Vérification
-Test	Résultat
-Génération Build	✅ Succès (build_runner)
-Analyse Statique	✅ Zéro Erreur Importante
-Mapping JSON	✅ Stable & Safe
-Sync Backend	✅ Support MAJUSCULES & null
-🚀 Prochaines Étapes
-Hot Restart : Appliquez les changements.
-Test Complet : Effectuez un paiement en choisissant "Espèce" (CASH) ou "Virement".
-Log : Vérifiez que dateModification est bien null dans les logs sans faire crasher l'app.
-L'application est maintenant parfaitement synchronisée avec votre backend Spring Boot ! 🚀
-
-
-Walkthrough - Secure Delivery Note System
-I have successfully implemented the secure delivery note system for the Tunisian artisan marketplace.
-
-Changes Made
-Backend (Spring Boot)
-DeliveryService Refactor:
-Now uses BonLivraisonDTO as the single source of truth.
-Implemented a professional CP1-style PDF layout including:
-Structured Sender/Receiver boxes.
-Detailed product table with weights.
-COD amount in French words (e.g., "Cent quarante-cinq dinars et cinq cents millimes").
-Secure QR code for delivery validation.
-Signature areas for the client.
-OrderController & ArtisanOrderController:
-Integrated BonLivraisonService to assemble complete data before PDF generation.
-Enforced strict ownership checks (Artisan-only access).
-Unified the delivery token lifecycle.
-Frontend (Flutter)
-ClientScanScreen:
-Implemented a robust QR code parser that handles both absolute URLs and relative paths.
-Added comprehensive error handling and user feedback (SnackBars, Dialogs).
-BonLivraisonScreen:
-Polished the preview UI to match the marketplace theme.
-Verification Results
-Backend
-✅ mvn compile successful.
-✅ Logic verified for ownership and token expiration.
-Frontend
-✅ flutter analyze verified (no issues in the modified features).
-✅ UI verified for responsive layout and loading states.
-Security Overview
-Artisan: Can generate the official document for their orders.
-Client: Can validate the physical receipt by scanning the QR code.
-Backend Enforcement: Validates that the scanner is the actual client of the order.
+Projet éducatif — PFE.
