@@ -6,7 +6,6 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.marketplace.delivery.dto.*;
-import com.marketplace.delivery.exception.DeliveryNotFoundException;
 import com.marketplace.entity.Order;
 import com.marketplace.enums.OrderStatus;
 import com.marketplace.repository.OrderRepository;
@@ -38,12 +37,8 @@ public class DeliveryQrService {
         Order order = orderRepository.findByTrackingNumber(trackingNumber)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + trackingNumber));
 
-        if (order.getDeliveryToken() == null || order.getDeliveryToken().isBlank()) {
-            throw new IllegalStateException("No delivery token for order: " + trackingNumber);
-        }
-
-        // QR content: trackingNumber|deliveryToken
-        String qrContent = trackingNumber + "|" + order.getDeliveryToken();
+        // QR content: just the trackingNumber (no token needed)
+        String qrContent = trackingNumber;
         String qrBase64 = generateQrImageBase64(qrContent);
 
         log.info("QR generated for order {}", trackingNumber);
@@ -51,14 +46,15 @@ public class DeliveryQrService {
         return DeliveryQrResponse.builder()
                 .trackingNumber(trackingNumber)
                 .qrCodeBase64(qrBase64)
-                .qrToken(order.getDeliveryToken())
+                .qrToken(order.getDeliveryToken()) // kept for DTO compatibility
                 .expiresAt("never")
                 .build();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
     // 2. SCAN & CONFIRM DELIVERY
-    //    Flutter scans QR → extracts trackingNumber|token → calls this
+    //    Flutter scans QR → extracts trackingNumber → calls this
+    //    Token validation removed for MVP simplicity
     // ═══════════════════════════════════════════════════════════════════════
 
     @Transactional
@@ -66,16 +62,10 @@ public class DeliveryQrService {
             QrDeliveryConfirmationRequest request) {
 
         String trackingNumber = request.getTrackingNumber();
-        String rawToken = request.getQrToken();
 
         // Find order by tracking number
         Order order = orderRepository.findByTrackingNumber(trackingNumber)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + trackingNumber));
-
-        // Validate token matches
-        if (order.getDeliveryToken() == null || !order.getDeliveryToken().equals(rawToken)) {
-            throw new SecurityException("Invalid delivery token");
-        }
 
         // Validate order is in SHIPPED status
         if (order.getStatut() != OrderStatus.SHIPPED) {
@@ -87,8 +77,6 @@ public class DeliveryQrService {
         // Mark as DELIVERED
         order.setStatut(OrderStatus.DELIVERED);
         order.setDateModification(java.time.LocalDateTime.now());
-
-        // Invalidate token after use
         order.setDeliveryToken(null);
 
         orderRepository.save(order);
