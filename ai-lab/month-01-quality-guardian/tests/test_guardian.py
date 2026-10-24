@@ -102,5 +102,80 @@ class QualityGuardianTests(unittest.TestCase):
             self.assertEqual(secret_findings, [])
 
 
+    def test_prefixed_api_key_is_detected(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+
+            (root / "config.properties").write_text(
+                "TEST_API_KEY=Q7mR4pL9vX2nK8\n",
+                encoding="utf-8",
+            )
+
+            findings = scan_project(root)
+            secret_findings = [
+                finding for finding in findings
+                if finding.rule == "SECRET_ASSIGNMENT"
+            ]
+
+            self.assertEqual(len(secret_findings), 1)
+
+
+    def test_documentation_secret_placeholders_are_ignored(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+
+            (root / "README.md").write_text(
+                "DB_PASSWORD=VotreMotDePasseSecurise\n"
+                "JWT_SECRET=CleSecreteTresLongueEtSecuriseeAuMoins256Bits123456\n",
+                encoding="utf-8",
+            )
+
+            findings = scan_project(root)
+            readme_findings = [
+                finding for finding in findings
+                if finding.file == "README.md"
+                and finding.rule == "SECRET_ASSIGNMENT"
+            ]
+
+            self.assertEqual(readme_findings, [])
+    def test_private_key_marker_is_detected(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+
+            (root / "private_key.txt").write_text(
+                "-----BEGIN RSA PRIVATE KEY-----\n",
+                encoding="utf-8",
+            )
+
+            findings = scan_project(root)
+            private_key_findings = [
+                finding
+                for finding in findings
+                if finding.rule == "PRIVATE_KEY"
+            ]
+
+            self.assertEqual(len(private_key_findings), 1)
+
+    def test_camel_case_secret_is_detected(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+
+            (root / "JwtTokenProvider.java").write_text(
+                'String jwtSecret = "Q7mR4pL9vX2nK8";\n',
+                encoding="utf-8",
+            )
+
+            findings = scan_project(root)
+            secret_findings = [
+                finding for finding in findings
+                if finding.rule == "SECRET_ASSIGNMENT"
+            ]
+
+            self.assertEqual(len(secret_findings), 1)
+            self.assertEqual(
+                secret_findings[0].file,
+                "JwtTokenProvider.java",
+            )
+
 if __name__ == "__main__":
     unittest.main()

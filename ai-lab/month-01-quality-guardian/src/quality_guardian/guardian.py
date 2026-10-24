@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -18,17 +17,27 @@ class Finding:
 
 SECRET_PATTERNS = {
     "SECRET_ASSIGNMENT": re.compile(
-        r"""(?i)\b(password|passwd|secret|api[_-]?key|access[_-]?token)\b"""
+        r"""(?i)(?<![a-z0-9])(?:[a-z0-9]+[._-])*[a-z0-9]*"""
+        r"""(password|passwd|secret|api[_-]?key|access[_-]?token)\b"""
         r"""\s*[:=]\s*["']?([^\s"'#,;]+)"""
     ),
+
     "PRIVATE_KEY": re.compile(
         r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"
     ),
 }
 
 IGNORED_DIRS = {
-    ".git", ".venv", "venv", "node_modules", "build",
-    "target", ".gradle", "__pycache__", "reports", "tests",
+    ".git",
+    ".venv",
+    "venv",
+    "node_modules",
+    "build",
+    "target",
+    ".gradle",
+    "__pycache__",
+    "reports",
+    "tests",
     "configs_pre_fix",
 }
 
@@ -38,18 +47,48 @@ IGNORED_FILES = {
 }
 
 TEXT_EXTENSIONS = {
-    ".py", ".java", ".properties", ".yml", ".yaml", ".json",
-    ".xml", ".gradle", ".kts", ".dart", ".js", ".ts", ".env",
-    ".md", ".txt", ".sh", ".ps1", ".sql",
+    ".py",
+    ".java",
+    ".properties",
+    ".yml",
+    ".yaml",
+    ".json",
+    ".xml",
+    ".gradle",
+    ".kts",
+    ".dart",
+    ".js",
+    ".ts",
+    ".env",
+    ".md",
+    ".txt",
+    ".sh",
+    ".ps1",
+    ".sql",
 }
 
 PLACEHOLDER_VALUES = {
-    "", "changeme", "change_me", "placeholder", "your_secret",
-    "your_api_key", "example", "dummy", "null", "none",
-    # Marqueurs francophones (documentation)
-    "votre_password", "votre_secret", "votre_username", "votre_api_key",
-    "votre_nom", "change_moi", "mon_secret", "a_definir",
-    "votre_password", "changer_moi",
+    "",
+    "changeme",
+    "change_me",
+    "placeholder",
+    "your_secret",
+    "your_api_key",
+    "example",
+    "dummy",
+    "null",
+    "none",
+    "votre_password",
+    "votre_secret",
+    "votre_username",
+    "votre_api_key",
+    "votre_nom",
+    "change_moi",
+    "mon_secret",
+    "a_definir",
+    "changer_moi",
+    "votremotdepassesecurise",
+    "clesecretetreslongueetsecuriseeaumoins256bits123456",
 }
 
 
@@ -62,10 +101,16 @@ def _is_placeholder(value: str) -> bool:
     if normalized.startswith("${") and normalized.endswith("}"):
         return True
 
-    if any(marker in normalized for marker in (
-        "fake_test", "example_secret", "unique_test_value",
-        "synthetic_test", "dummy_secret",
-    )):
+    if any(
+        marker in normalized
+        for marker in (
+            "fake_test",
+            "example_secret",
+            "unique_test_value",
+            "synthetic_test",
+            "dummy_secret",
+        )
+    ):
         return True
 
     return False
@@ -88,8 +133,10 @@ def _remove_comments(content: str, suffix: str) -> str:
         return content
 
     lines = []
+
     for line in content.splitlines():
         stripped = line.lstrip()
+
         if any(stripped.startswith(prefix) for prefix in prefixes):
             lines.append("")
         else:
@@ -158,11 +205,14 @@ def scan_project(root: Path) -> list[Finding]:
 
             if rule == "SECRET_ASSIGNMENT":
                 matches = [
-                    match for match in matches
+                    match
+                    for match in matches
                     if not _is_placeholder(match.group(2))
                 ]
 
             if matches:
+                first_match = matches[0]
+
                 findings.append(
                     Finding(
                         rule=rule,
@@ -173,21 +223,28 @@ def scan_project(root: Path) -> list[Finding]:
                         ),
                         file=relative.as_posix(),
                         line=content.count(
-                            "\n", 0, matches[0].start()
-                        ) + 1,
+                            "\n", 0, first_match.start()
+                        )
+                        + 1,
                     )
                 )
 
     return findings
 
 
-def write_report(findings: list[Finding], output_path: Path) -> None:
+def write_report(
+    findings: list[Finding],
+    output_path: Path,
+) -> None:
     """Write findings to JSON without storing secret values."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     payload = {
         "finding_count": len(findings),
-        "findings": [asdict(finding) for finding in findings],
+        "findings": [
+            asdict(finding)
+            for finding in findings
+        ],
     }
 
     output_path.write_text(
