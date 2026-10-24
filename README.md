@@ -1,6 +1,36 @@
 # Marketplace API — Spring Boot
 
-Backend REST API d'une application marketplace artisanale tunisienne, conçu pour être consommé par une application mobile Flutter. Le système intègre une gestion sécurisée des commandes, un module de bons de livraison avec QR code, et une synchronisation robuste des données avec le frontend mobile.
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![Java](https://img.shields.io/badge/Java-17-orange.svg)](https://www.oracle.com/java/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0-blue.svg)](https://www.mysql.com/)
+[![Security](https://img.shields.io/badge/Security-JWT%20%2B%20Zero--Leak-red.svg)](#sécurité-et-gestion-des-secrets)
+[![Quality Guardian](https://img.shields.io/badge/AI%20Lab-Quality%20Guardian-purple.svg)](#-ai-lab--quality-guardian)
+
+Backend REST API d'une application marketplace artisanale tunisienne, conçu pour être consommé par une application mobile Flutter. Le système intègre une gestion sécurisée des commandes, un module de bons de livraison avec QR code, une gestion des stocks en temps réel et une synchronisation robuste des données avec le frontend mobile.
+
+---
+
+## Sommaire
+
+- [Architecture](#architecture)
+- [Sécurité et Gestion des Secrets](#sécurité-et-gestion-des-secrets)
+- [Variables d'Environnement](#variables-denvironnement)
+- [Prérequis](#prérequis)
+- [Installation et Configuration](#installation-et-configuration)
+  - [1. Cloner le dépôt](#1-cloner-le-dépôt)
+  - [2. Configurer la base de données MySQL](#2-configurer-la-base-de-données-mysql)
+  - [3. Configurer le fichier d'environnement (.env)](#3-configurer-le-fichier-denvironnement-env)
+- [Démarrage de l'Application](#démarrage-de-lapplication)
+  - [Option A : Script Windows PowerShell (Recommandé)](#option-a--script-windows-powershell-recommandé)
+  - [Option B : Lancement manuel Maven](#option-b--lancement-manuel-maven)
+  - [Option C : Docker Compose](#option-c--docker-compose)
+- [Endpoints API](#endpoints-api)
+- [Format des Réponses](#format-des-réponses)
+- [Module Bon de Livraison & QR Code](#module-bon-de-livraison--qr-code)
+- [Synchronisation Flutter ↔ Backend](#synchronisation-flutter--backend)
+- [AI Lab — Quality Guardian](#-ai-lab--quality-guardian)
+- [Tests et Validation](#tests-et-validation)
+- [Licence](#licence)
 
 ---
 
@@ -9,275 +39,331 @@ Backend REST API d'une application marketplace artisanale tunisienne, conçu pou
 L'application suit une architecture en couches respectant les principes SOLID :
 
 ```
-Controller  →  Service  →  Repository  →  Base de données
+Controller  →  Service  →  Repository  →  Base de données MySQL
      ↕              ↕
     DTO         Entity (JPA)
      ↕
-  Security (JWT)
+  Security (JWT Stateless)
 ```
 
-> **Note PFE** — Afin d'éviter les problèmes de sérialisation liés aux relations JPA et au lazy loading, l'API utilise des DTOs comme seule interface d'échange de données avec l'application mobile Flutter.
+> **Note d'ingénierie (PFE)** — Afin d'éviter les problèmes de sérialisation liés aux relations JPA et au lazy loading, l'API utilise des DTOs (Data Transfer Objects) comme unique interface d'échange avec l'application mobile Flutter.
+
+---
+
+## Sécurité et Gestion des Secrets
+
+L'application applique une politique stricte de **Zero Hardcoded Secret** :
+
+1. **Aucun secret dans le code source** : Aucun mot de passe, clé secrète JWT ou jeton API externe n'est présent dans les fichiers versionnés (`application.properties`, `application*.yml`, `docker-compose.yml`, code Java).
+2. **Isolation par `.env`** : Toutes les valeurs sensibles sont externalisées dans un fichier `.env` local, strictement ignoré par Git (`.gitignore`).
+3. **Modèle de référence `.env.example`** : Un modèle documenté est versionné pour faciliter le déploiement sur tout nouvel environnement.
+4. **Validation au démarrage** : Le script de lancement et Spring Boot vérifient la présence des variables obligatoires sans jamais exposer leurs valeurs dans les logs ou les consoles.
+5. **Authentification Stateless JWT** : Les routes protégées nécessitent le header standard :
+   ```http
+   Authorization: Bearer <votre_token_jwt>
+   ```
+
+### Rôles applicatifs
+
+| Rôle | Périmètre d'accès |
+|---|---|
+| `CLIENT` | Passer des commandes, initier des paiements, scanner les bons de livraison QR |
+| `ARTISAN` | Gérer ses produits, consulter ses commandes, générer des bons de livraison PDF |
+| `ADMIN` | Accès complet aux ressources d'administration, catégories et utilisateurs |
+
+---
+
+## Variables d'Environnement
+
+Le tableau ci-dessous récapitule les variables gérées par le backend :
+
+| Variable | Description | Obligatoire | Valeur par défaut / Exemple |
+|---|---|:---:|---|
+| `DB_URL` | URL JDBC de la base de données MySQL | Oui | `jdbc:mysql://localhost:3306/marketplace_local?useSSL=false&serverTimezone=UTC` |
+| `DB_USERNAME` | Utilisateur MySQL de l'application | Oui | `marketplace_dev` |
+| `DB_PASSWORD` | Mot de passe du compte MySQL applicatif | **Oui** | *(Défini localement)* |
+| `JWT_SECRET` | Clé secrète de signature HMAC (>= 256 bits) | **Oui** | *(Min 32 caractères aléatoires)* |
+| `JWT_EXPIRATION` | Durée de validité du token en ms | Non | `86400000` (24 heures) |
+| `PORT` | Port d'écoute du serveur Spring Boot | Non | `8080` |
+| `SPRING_PROFILES_ACTIVE`| Profil Spring actif (`dev`, `prod`) | Non | Non défini (profil par défaut) |
+| `CLOUDINARY_CLOUD_NAME` | Nom du cloud Cloudinary pour stockage médias | Non | Dépend de l'environnement |
+| `CLOUDINARY_API_KEY` | Clé API Cloudinary | Non | Dépend de l'environnement |
+| `CLOUDINARY_API_SECRET`| Secret API Cloudinary | Non | Dépend de l'environnement |
+| `FCM_PROJECT_ID` | Identifiant du projet Firebase Cloud Messaging | Non | Dépend de l'environnement |
+| `FCM_SERVICE_ACCOUNT_PATH` | Chemin vers la clé de service Firebase | Non | Dépend de l'environnement |
 
 ---
 
 ## Prérequis
 
-| Outil | Version minimale |
+| Composant | Version minimale requise |
 |---|---|
-| Java | 17 |
-| Maven | 3.6 |
-| MySQL | 8.0 |
+| **Java JDK** | 17 (Eclipse Temurin, OpenJDK ou Oracle JDK) |
+| **MySQL Server** | 8.0+ |
+| **Maven** | 3.6+ *(ou utiliser le wrapper inclus `./mvnw` / `mvnw.cmd`)* |
+| **Python** | 3.9+ *(optionnel, requis pour Quality Guardian)* |
 
 ---
 
-## Installation
+## Installation et Configuration
 
 ### 1. Cloner le dépôt
 
 ```bash
-git clone <repository-url>
-cd boot
+git clone https://github.com/macModa/marketplace.git
+cd marketplace
 ```
 
-### 2. Créer la base de données
+### 2. Configurer la base de données MySQL
+
+Connectez-vous à MySQL en administrateur :
 
 ```sql
-CREATE DATABASE marketplace_db;
+-- Création de la base de données locale
+CREATE DATABASE marketplace_local CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Création d'un utilisateur dédié (bonnes pratiques : ne pas utiliser root)
+CREATE USER 'marketplace_dev'@'localhost' IDENTIFIED BY 'VotreMotDePasseSecurise';
+
+-- Attribution des privilèges sur la base applicative
+GRANT ALL PRIVILEGES ON marketplace_local.* TO 'marketplace_dev'@'localhost';
+FLUSH PRIVILEGES;
 ```
 
-### 3. Configurer `application.yml`
+### 3. Configurer le fichier d'environnement (.env)
 
-```yaml
-spring:
-  datasource:
-    url: jdbc:mysql://localhost:3306/marketplace_db
-    username: votre_username
-    password: votre_password
-```
-
-### 4. Démarrer l'application
+Copiez le modèle fourni vers votre fichier local `.env` :
 
 ```bash
-mvn spring-boot:run
+# Sous Windows PowerShell :
+Copy-Item .env.example .env
+
+# Sous Linux / macOS / Git Bash :
+cp .env.example .env
 ```
 
-L'API est accessible sur `http://localhost:8080`.
+Éditez le fichier `.env` avec vos identifiants réels :
+
+```ini
+DB_URL=jdbc:mysql://localhost:3306/marketplace_local?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+DB_USERNAME=marketplace_dev
+DB_PASSWORD=VotreMotDePasseSecurise
+JWT_SECRET=CleSecreteTresLongueEtSecuriseeAuMoins256Bits123456
+```
+
+> **Attention** : Ne committez JAMAIS le fichier `.env`. Il est protégé par `.gitignore`.
 
 ---
 
-## Endpoints
+## Démarrage de l'Application
 
-### Authentification
+### Option A : Script Windows PowerShell (Recommandé)
 
-| Méthode | Route | Description |
-|---|---|---|
-| POST | `/api/auth/register` | Inscription (Artisan ou Client) |
-| POST | `/api/auth/login` | Connexion, retourne un token JWT |
+Un script automatisé est disponible pour charger le `.env`, tester la connectivité MySQL et lancer Spring Boot :
 
-### Produits
+```powershell
+.\run-marketplace.ps1
+```
+
+Le script réalise automatiquement :
+1. La lecture sécurisée des variables depuis `.env`.
+2. L'injection dans la portée du processus sans affichage console.
+3. La vérification de la présence des variables obligatoires (`DB_PASSWORD`, `JWT_SECRET`).
+4. Le test de connexion TCP vers MySQL sur le port 3306.
+5. Le démarrage du serveur Spring Boot.
+
+### Option B : Lancement manuel Maven
+
+**Sous Windows PowerShell :**
+```powershell
+# Injection des variables dans la session
+Get-Content .env | Where-Object { $_ -notmatch '^\s*#' -and $_ -match '=' } | ForEach-Object {
+    $k, $v = $_ -split '=', 2
+    [System.Environment]::SetEnvironmentVariable($k.Trim(), $v.Trim(), "Process")
+}
+
+# Lancement
+.\mvnw.cmd spring-boot:run
+```
+
+**Sous Linux / macOS / Bash :**
+```bash
+set -a
+source .env
+set +a
+
+./mvnw spring-boot:run
+```
+
+L'API est prête et accessible sur `http://localhost:8080`.
+
+### Option C : Docker Compose
+
+Pour démarrer un conteneur MySQL isolé avec vos variables `.env` :
+
+```bash
+docker-compose up -d
+```
+
+---
+
+## Endpoints API
+
+### Authentification (`/api/auth`)
 
 | Méthode | Route | Accès | Description |
 |---|---|---|---|
-| GET | `/api/products` | Public | Liste paginée |
-| GET | `/api/products/{id}` | Public | Détail d'un produit |
-| GET | `/api/products/category/{categoryId}` | Public | Par catégorie |
-| GET | `/api/products/artisan/{artisanId}` | Public | Par artisan |
-| GET | `/api/products/search?keyword=...` | Public | Recherche textuelle |
-| GET | `/api/products/available` | Public | Produits en stock |
-| POST | `/api/products` | Artisan | Créer un produit |
-| PUT | `/api/products/{id}` | Artisan | Modifier un produit |
-| DELETE | `/api/products/{id}` | Artisan | Supprimer un produit |
+| `POST` | `/api/auth/register` | Public | Inscription (Artisan ou Client) |
+| `POST` | `/api/auth/login` | Public | Connexion, retourne le jeton JWT |
 
-### Catégories
+### Produits (`/api/products`)
 
-| Méthode | Route | Accès |
-|---|---|---|
-| GET | `/api/categories` | Public |
-| GET | `/api/categories/{id}` | Public |
-| POST | `/api/categories` | Admin |
-| PUT | `/api/categories/{id}` | Admin |
-| DELETE | `/api/categories/{id}` | Admin |
+| Méthode | Route | Accès | Description |
+|---|---|---|---|
+| `GET` | `/api/products` | Public | Liste paginée des produits |
+| `GET` | `/api/products/{id}` | Public | Consultation d'un produit par ID |
+| `GET` | `/api/products/category/{categoryId}` | Public | Produits d'une catégorie |
+| `GET` | `/api/products/artisan/{artisanId}` | Public | Produits publiés par un artisan |
+| `GET` | `/api/products/search?keyword=...` | Public | Recherche plein texte |
+| `GET` | `/api/products/available` | Public | Produits en stock disponible |
+| `POST` | `/api/products` | `ARTISAN` | Création d'un produit |
+| `PUT` | `/api/products/{id}` | `ARTISAN` | Modification d'un produit existant |
+| `DELETE` | `/api/products/{id}` | `ARTISAN` | Suppression logique d'un produit |
 
-### Commandes
+### Catégories (`/api/categories`)
 
-| Méthode | Route | Description |
-|---|---|---|
-| POST | `/api/orders` | Créer une commande |
-| GET | `/api/orders/{id}` | Détail d'une commande |
-| GET | `/api/orders/my-orders` | Historique du client connecté |
-| PUT | `/api/orders/{id}/cancel` | Annuler une commande |
+| Méthode | Route | Accès | Description |
+|---|---|---|---|
+| `GET` | `/api/categories` | Public | Liste des catégories actives |
+| `GET` | `/api/categories/{id}` | Public | Détail d'une catégorie |
+| `POST` | `/api/categories` | `ADMIN` | Création d'une catégorie |
+| `PUT` | `/api/categories/{id}` | `ADMIN` | Mise à jour d'une catégorie |
+| `DELETE` | `/api/categories/{id}` | `ADMIN` | Suppression d'une catégorie |
 
-### Paiements
+### Commandes (`/api/orders`)
 
-| Méthode | Route | Description |
-|---|---|---|
-| POST | `/api/payments/order/{orderId}` | Initier un paiement |
-| GET | `/api/payments/order/{orderId}` | Paiement lié à une commande |
-| GET | `/api/payments/{id}` | Détail d'un paiement |
+| Méthode | Route | Accès | Description |
+|---|---|---|---|
+| `POST` | `/api/orders` | `CLIENT` | Créer une commande avec panier |
+| `GET` | `/api/orders/{id}` | Connecté | Détail d'une commande (artisan/client) |
+| `GET` | `/api/orders/my-orders` | `CLIENT` | Historique des commandes du client |
+| `PUT` | `/api/orders/{id}/cancel` | `CLIENT` | Annulation d'une commande |
 
----
+### Paiements (`/api/payments`)
 
-## Sécurité
-
-L'authentification est stateless via **JWT (JSON Web Token)**.
-
-Inclure le token dans chaque requête protégée :
-
-```
-Authorization: Bearer <token>
-```
-
-### Rôles
-
-| Rôle | Permissions |
-|---|---|
-| `CLIENT` | Passer des commandes, effectuer des paiements, scanner les bons de livraison |
-| `ARTISAN` | Gérer ses produits, générer des bons de livraison pour ses commandes |
-| `ADMIN` | Accès complet à toutes les ressources |
+| Méthode | Route | Accès | Description |
+|---|---|---|---|
+| `POST` | `/api/payments/order/{orderId}` | `CLIENT` | Initialiser le paiement d'une commande |
+| `GET` | `/api/payments/order/{orderId}` | Connecté | Consulter le statut de paiement |
+| `GET` | `/api/payments/{id}` | Connecté | Détail technique d'un paiement |
 
 ---
 
-## Modèle de données
+## Format des Réponses
 
-```
-User (abstrait)
-├── Artisan       → publie des produits
-└── Client        → passe des commandes
+Toutes les réponses de l'API suivent une structure normalisée et uniforme :
 
-Category          → classe les produits
-Product           → rattaché à un Artisan et une Category
-Order             → passée par un Client
-├── OrderLine     → lignes de commande (produit + quantité)
-└── Payment       → paiement associé à la commande
-```
-
----
-
-## Format des réponses
-
-Toutes les réponses respectent une enveloppe standard :
-
+### Réponse avec succès :
 ```json
 {
   "success": true,
   "message": "Opération réussie",
-  "data": { ... },
-  "timestamp": "2024-01-01T12:00:00"
+  "data": {
+    "id": 1,
+    "nom": "Poterie traditionnelle",
+    "prix": 45.500
+  },
+  "timestamp": "2026-10-24T12:00:00"
 }
 ```
 
-En cas d'erreur :
-
+### Réponse d'erreur :
 ```json
 {
   "success": false,
-  "message": "Description de l'erreur",
+  "message": "Ressource non trouvée avec l'identifiant : 42",
   "data": null,
-  "timestamp": "2024-01-01T12:00:00"
+  "timestamp": "2026-10-24T12:00:00"
 }
 ```
 
 ---
 
-## Module Bon de Livraison
+## Module Bon de Livraison & QR Code
 
-Un système sécurisé de bons de livraison PDF est intégré, incluant :
+Un module de génération et de vérification de bons de livraison PDF est inclus :
 
-- Mise en page structurée (expéditeur / destinataire, tableau produits avec poids)
-- Montant en toutes lettres en français (ex. : *Cent quarante-cinq dinars et cinq cents millimes*)
-- QR code de validation scannable par le client depuis l'application mobile
-- Zone de signature client
-
-**Flux de sécurité :**
+- Génération PDF structurée (coordonnées expéditeur/destinataire, tableau des produits, poids).
+- Montant en toutes lettres en français conforme aux normes bancaires et comptables tunisiennes.
+- QR Code sécurisé contenant les informations de scellement de la livraison.
+- Zone de signature électronique ou physique du client.
 
 ```
-Artisan  →  génère le bon PDF (vérification propriété commande)
-Client   →  scanne le QR code pour valider la réception
-Backend  →  vérifie que le scanner est bien le client de la commande
+Artisan  → Génère le bon PDF avec QR code
+   ↓
+Livreur  → Remet le colis au destinataire
+   ↓
+Client   → Scanne le QR code via l'application mobile Flutter
+   ↓
+Backend  → Valide cryptographiquement l'intégrité et clôture la livraison
 ```
-
-> **Note PFE** — Afin d'optimiser la fiabilité des livraisons, un module interne de détection automatique des codes postaux tunisiens a été implémenté. Ce module repose sur une table normalisée et indexée, exposée via une API REST sécurisée, garantissant la cohérence des données entre l'application mobile Flutter et le backend Spring Boot.
 
 ---
 
 ## Synchronisation Flutter ↔ Backend
 
-La couche de communication avec l'application mobile a été renforcée sur plusieurs points :
-
-**Enums** — Les valeurs sont désormais alignées entre les deux plateformes via des mappers dédiés :
-
-| Domaine | Valeurs |
-|---|---|
-| `PaymentMethod` | `CASH`, `CARD`, `MOBILE_MONEY`, `BANK_TRANSFER` |
-| `PaymentStatus` | `PENDING`, `COMPLETED`, `FAILED`, `REFUNDED` |
-| `OrderStatus` | `PENDING`, `CONFIRMED`, `SHIPPED`, `DELIVERED`, `CANCELLED` |
-
-**Null safety** — Les champs optionnels (ex. `dateModification`) sont correctement marqués nullable dans les DTOs pour éviter les crashes à la désérialisation.
+- **Enums unifiés** :
+  - `OrderStatus` : `PENDING`, `CONFIRMED`, `SHIPPED`, `DELIVERED`, `CANCELLED`
+  - `PaymentStatus` : `PENDING`, `COMPLETED`, `FAILED`, `REFUNDED`
+  - `PaymentMethod` : `CASH`, `CARD`, `MOBILE_MONEY`, `BANK_TRANSFER`
+- **Gestion des valeurs nulles** : Champs optionnels systématiquement gérés pour prévenir toute interruption de parsing côté Flutter.
+- **Codes Postaux Tunisiens** : Table normalisée et indexée pour l'autocomplétion des adresses dans l'application mobile.
 
 ---
 
-## Technologies
+## 🛡️ AI Lab — Quality Guardian
 
-| Composant | Technologie |
-|---|---|
-| Framework | Spring Boot 3.2.0 |
-| ORM | Spring Data JPA / Hibernate |
-| Sécurité | Spring Security + JWT (jjwt) |
-| Base de données | MySQL 8 |
-| Réduction boilerplate | Lombok |
-| Logging | SLF4J / Logback |
+Dans le cadre du programme de fiabilité applicative (**AI Lab - Mois 1**), le projet intègre **Quality Guardian** (`ai-lab/month-01-quality-guardian`).
 
----
+Cet outil autonome réalise des audits de sécurité et de conformité en lecture seule :
+- Détection proactive des secrets en dur (`SECRET_ASSIGNMENT`, `PRIVATE_KEY`).
+- Vérification des fichiers d'architecture obligatoires (`REQUIRED_FILE`, `PROJECT_ROOT`).
+- Protection contre la divulgation : les valeurs détectées ne sont jamais écrites dans les rapports JSON.
+- Tolérance aux faux-positifs documentaires (placeholders et exemples français).
 
-## Bonnes pratiques implémentées
-
-- Architecture en couches (Controller → Service → Repository)
-- Séparation des responsabilités (principes SOLID)
-- Validation des entrées via Bean Validation
-- Gestion globale des exceptions avec `@ControllerAdvice`
-- Transactions `@Transactional` sur les opérations critiques (commande, paiement, stock)
-- Pagination sur toutes les listes
-- DTOs pour l'isolation des entités JPA
-- Indexation des colonnes fréquemment interrogées
-- Logging structuré avec rotation automatique (`logs/marketplace.log`)
-
----
-
-## Environnements
-
-| Profil | Fichier |
-|---|---|
-| Développement | `application-dev.yml` |
-| Production | `application-prod.yml` |
-
-Activer un profil :
+### Exécuter un audit de sécurité :
 
 ```bash
-mvn spring-boot:run -Dspring-boot.run.profiles=dev
+cd ai-lab/month-01-quality-guardian
+.\.venv\Scripts\python.exe cli.py scan --root ../.. --report reports/quality-report.json
 ```
+
+Pour consulter la documentation complète du gardien, voir [README de Quality Guardian](ai-lab/month-01-quality-guardian/README.md).
 
 ---
 
-## Tests
+## Tests et Validation
 
-```bash
-mvn test
+### 1. Exécuter la suite de tests Java Spring Boot
+
+```powershell
+# Charger l'environnement puis lancer les tests
+Get-Content .env | Where-Object { $_ -notmatch '^\s*#' -and $_ -match '=' } | ForEach-Object {
+    $k, $v = $_ -split '=', 2
+    [System.Environment]::SetEnvironmentVariable($k.Trim(), $v.Trim(), "Process")
+}
+.\mvnw.cmd test
 ```
 
----
+### 2. Exécuter les tests unitaires de Quality Guardian
 
-## Pistes d'amélioration
-
-- Tests unitaires et d'intégration (JUnit 5 / Mockito)
-- Documentation interactive avec Swagger / OpenAPI 3
-- Cache Redis pour les codes postaux et les données fréquentes
-- Upload et stockage d'images produits
-- Notifications en temps réel (WebSocket ou FCM)
-- Dockerisation complète (Docker Compose)
-- Fuzzy search sur les adresses (tolérance aux fautes de frappe)
+```powershell
+cd ai-lab\month-01-quality-guardian
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
 
 ---
 
 ## Licence
 
-Projet éducatif — PFE.
+Projet développé dans le cadre académique (PFE) — Marketplace artisanale. Tous droits réservés.

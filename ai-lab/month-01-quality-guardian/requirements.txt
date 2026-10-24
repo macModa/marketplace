@@ -1,0 +1,3 @@
+# Quality Guardian - Dépendances Python
+# Cet outil utilise exclusivement la bibliothèque standard Python 3.9+ (re, pathlib, json, dataclasses, argparse, unittest).
+# Aucune dépendance externe tierce n'est requise.

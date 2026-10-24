@@ -20,7 +20,7 @@ public class JwtTokenProvider {
     
     private static final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
     
-    @Value("${jwt.secret:mySecretKeyForJWTTokenGenerationThatShouldBeAtLeast256BitsLong}")
+    @Value("${jwt.secret}")
     private String jwtSecret;
     
     @Value("${jwt.expiration:86400000}") // 24 hours

@@ -1,0 +1,33 @@
+{
+  "finding_count": 4,
+  "findings": [
+    {
+      "rule": "SECRET_ASSIGNMENT",
+      "severity": "WARNING",
+      "message": "Potential hard-coded secret detected; value withheld.",
+      "file": "backups/configs_pre_fix/application-dev.yml",
+      "line": 5
+    },
+    {
+      "rule": "SECRET_ASSIGNMENT",
+      "severity": "WARNING",
+      "message": "Potential hard-coded secret detected; value withheld.",
+      "file": "backups/configs_pre_fix/application.properties",
+      "line": 58
+    },
+    {
+      "rule": "SECRET_ASSIGNMENT",
+      "severity": "WARNING",
+      "message": "Potential hard-coded secret detected; value withheld.",
+      "file": "backups/configs_pre_fix/application.yml",
+      "line": 8
+    },
+    {
+      "rule": "SECRET_ASSIGNMENT",
+      "severity": "WARNING",
+      "message": "Potential hard-coded secret detected; value withheld.",
+      "file": "backups/configs_pre_fix/JwtTokenProvider.java",
+      "line": 23
+    }
+  ]
+}

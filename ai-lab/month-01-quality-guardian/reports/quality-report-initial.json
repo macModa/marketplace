@@ -1,0 +1,40 @@
+{
+  "finding_count": 5,
+  "findings": [
+    {
+      "rule": "SECRET_ASSIGNMENT",
+      "severity": "WARNING",
+      "message": "Potential hard-coded secret detected; value withheld.",
+      "file": "README.md",
+      "line": 55
+    },
+    {
+      "rule": "SECRET_ASSIGNMENT",
+      "severity": "WARNING",
+      "message": "Potential hard-coded secret detected; value withheld.",
+      "file": "src/main/resources/application-dev.yml",
+      "line": 5
+    },
+    {
+      "rule": "SECRET_ASSIGNMENT",
+      "severity": "WARNING",
+      "message": "Potential hard-coded secret detected; value withheld.",
+      "file": "src/main/resources/application.properties",
+      "line": 58
+    },
+    {
+      "rule": "SECRET_ASSIGNMENT",
+      "severity": "WARNING",
+      "message": "Potential hard-coded secret detected; value withheld.",
+      "file": "src/main/resources/application.yml",
+      "line": 8
+    },
+    {
+      "rule": "SECRET_ASSIGNMENT",
+      "severity": "WARNING",
+      "message": "Potential hard-coded secret detected; value withheld.",
+      "file": "src/main/java/com/marketplace/security/JwtTokenProvider.java",
+      "line": 23
+    }
+  ]
+}

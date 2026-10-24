@@ -1,6 +1,7 @@
 # Compiled class file
 *.class
-
+# Sauvegardes locales contenant des données
+backups/
 # Log file
 *.log
 
@@ -52,4 +53,17 @@ Thumbs.db
 # Application specific
 logs/
 application-local.yml
+# Secrets et configurations locales
+.env
+.env.*
+!.env.example
 
+# Script de lancement local (lit le .env)
+run-marketplace.ps1
+
+# Clés et certificats privés
+*.pem
+*.key
+
+# Logs temporaires de compilation
+compile_*.txt
