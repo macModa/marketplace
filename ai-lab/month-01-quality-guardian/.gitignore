@@ -13,3 +13,6 @@ env/
 # Scratch & temporary scripts
 inspect_findings.py
 show_report.py
+
+# Temporary diagnostic report
+/reports/probe-report.json
