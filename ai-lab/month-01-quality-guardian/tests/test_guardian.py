@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from src.quality_guardian.guardian import scan_project, write_report
+from src.quality_guardian import guardian
 
 
 class QualityGuardianTests(unittest.TestCase):
@@ -176,6 +177,96 @@ class QualityGuardianTests(unittest.TestCase):
                 secret_findings[0].file,
                 "JwtTokenProvider.java",
             )
+
+    def test_nonexistent_project_root_is_reported(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory) / "missing-project"
+
+            findings = scan_project(root)
+
+        root_findings = [
+            finding for finding in findings
+            if finding.rule == "PROJECT_ROOT"
+        ]
+        self.assertEqual(len(root_findings), 1)
+        self.assertEqual(root_findings[0].severity, "ERROR")
+
+    def test_ignored_paths_are_skipped_but_env_is_scanned(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+
+            ignored_dir_name = next(iter(guardian.IGNORED_DIRS))
+            ignored_file_name = next(iter(guardian.IGNORED_FILES))
+
+            ignored_dir = root / ignored_dir_name
+            ignored_dir.mkdir(parents=True, exist_ok=True)
+
+            (ignored_dir / "config.properties").write_text(
+                "app.password=IgnoredTestSecret123\n",
+                encoding="utf-8",
+            )
+
+            (root / ignored_file_name).write_text(
+                "app.password=IgnoredFileSecret123\n",
+                encoding="utf-8",
+            )
+
+            (root / ".env").write_text(
+                "APP_PASSWORD=EnvTestSecret123\n",
+                encoding="utf-8",
+            )
+
+            (root / "binary.bin").write_bytes(b"\xff\xfe\x00")
+
+            findings = scan_project(root)
+            secret_findings = [
+                finding for finding in findings
+                if finding.rule == "SECRET_ASSIGNMENT"
+            ]
+
+        self.assertEqual(
+            [finding.file for finding in secret_findings],
+            [".env"],
+        )
+
+    def test_invalid_utf8_file_does_not_stop_scan(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+
+            (root / "broken.properties").write_bytes(
+                b"\xff\xfe\xfa"
+            )
+            (root / "config.properties").write_text(
+                "app.password=ValidTestSecret123\n",
+                encoding="utf-8",
+            )
+
+            findings = scan_project(root)
+            secret_findings = [
+                finding for finding in findings
+                if finding.rule == "SECRET_ASSIGNMENT"
+            ]
+
+        self.assertEqual(len(secret_findings), 1)
+        self.assertEqual(secret_findings[0].file, "config.properties")
+
+    def test_synthetic_secret_placeholder_is_ignored(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+
+            (root / "config.properties").write_text(
+                "app.password=example_secret_value_123\n",
+                encoding="utf-8",
+            )
+
+            findings = scan_project(root)
+            secret_findings = [
+                finding for finding in findings
+                if finding.rule == "SECRET_ASSIGNMENT"
+            ]
+
+            self.assertEqual(secret_findings, [])
+
 
 if __name__ == "__main__":
     unittest.main()
