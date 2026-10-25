@@ -34,7 +34,7 @@ ai-lab/month-01-quality-guardian/
 │       ├── __init__.py
 │       └── guardian.py       # Moteur d'analyse statique et règles
 ├── tests/
-│   └── test_guardian.py      # Suite de tests unitaires (5/5 tests validés)
+│   └── test_guardian.py      # Suite de tests unitaires (13 tests)
 ├── reports/                  # Rapports d'audit générés (JSON)
 ├── cli.py                    # Point d'entrée en ligne de commande
 ├── requirements.txt          # Spécifications d'environnement Python
@@ -89,21 +89,41 @@ En cas d'anomalie détectée, chaque élément comprend :
 
 ---
 
-## 🧪 Tests Unitaires
+## Tests unitaires et couverture
 
-Une suite de tests exhaustifs vérifie la robustesse du moteur et le bon fonctionnement des règles et des exclusions :
+Les tests automatisés vérifient notamment :
+- La détection des assignations de secrets et des clés privées.
+- L'exclusion des placeholders documentaires.
+- La protection des secrets dans le rapport JSON.
+- Le comportement avec une racine inexistante ou des fichiers ignorés.
+- La tolérance aux fichiers qui ne sont pas décodables en UTF-8.
+
+Lancer les tests depuis la racine de ce module :
 
 ```powershell
-python -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-Tests inclus :
-- `test_scan_detects_secret_assignment` : Vérifie la détection d'un secret en clair.
-- `test_scan_detects_private_key` : Vérifie la détection d'une clé privée.
-- `test_scan_ignores_placeholders` : Vérifie l'exclusion des placeholders standards (`changeme`, etc.).
-- `test_french_placeholder_is_ignored` : Vérifie l'exclusion des marqueurs documentaires francophones.
-- `test_write_report_withholds_secrets` : Vérifie que le rapport n'écrit jamais de secret en clair.
+Résultat attendu actuellement : 13 tests réussis.
 
+### Mesurer la couverture
+
+Installer Coverage si nécessaire :
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install coverage
+```
+
+Puis lancer :
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path .\src).Path
+.\.venv\Scripts\python.exe -m coverage erase
+.\.venv\Scripts\python.exe -m coverage run --source=src/quality_guardian -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe -m coverage report -m
+```
+
+La couverture mesurée était de 100 % des instructions pour `guardian.py` (73 sur 73) lors de la dernière exécution validée. Ce résultat ne garantit pas l'absence de bugs et doit être confirmé après toute modification.
 ---
 
 ## ⚙️ Règles et Extensions Analysées
@@ -113,3 +133,13 @@ Tests inclus :
 
 ### Dossiers exclus par défaut :
 `.git`, `.venv`, `node_modules`, `target`, `build`, `.gradle`, `__pycache__`, `reports`, `tests`, `configs_pre_fix`.
+
+---
+
+## Limites et précautions
+
+- Quality Guardian est un outil d'analyse statique en lecture seule ; il ne remplace pas une revue de sécurité complète.
+- Un résultat sans détection ne prouve pas qu'un projet ne contient aucun secret.
+- Les fichiers `.env` restent analysés : leur présence dans `.gitignore` ne les exclut pas automatiquement du scan.
+- Les rapports indiquent les fichiers et lignes concernés sans enregistrer les valeurs suspectées.
+- Ne publiez jamais un rapport ou un fichier de configuration avant d'avoir vérifié qu'il ne contient aucune donnée sensible.
