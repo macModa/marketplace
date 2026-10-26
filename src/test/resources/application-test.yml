@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: marketplace-backend-test
+
+  datasource:
+    url: jdbc:h2:mem:marketplacedb;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    open-in-view: false
+
+jwt:
+  secret: test-secret-key-32-bytes-long-for-hmac-sha-marketplace-testing
+  expiration: 86400000
+
+cloudinary:
+  cloud-name: dummy-test-cloud
+  api-key: "123456789012345"
+  api-secret: dummy-secret-test-key-market
+
+fcm:
+  project-id: dummy-fcm-project
+  service-account-path: dummy-fcm-service-account.json
