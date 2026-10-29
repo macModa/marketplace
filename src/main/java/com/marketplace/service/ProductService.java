@@ -75,9 +75,14 @@ public class ProductService {
         Product product = productRepository.findById(productId)
             .orElseThrow(() -> new IllegalArgumentException("Produit non trouvé: " + productId));
         
-        if (!product.getArtisan().getId().equals(artisanId)) {
-            throw new IllegalStateException("Vous n'êtes pas autorisé à modifier ce produit");
-        }
+       if (product.getArtisan() == null
+        || product.getArtisan().getId() == null
+        || !product.getArtisan().getId().equals(artisanId)) {
+    throw new ResponseStatusException(
+        HttpStatus.FORBIDDEN,
+        "Vous n'êtes pas autorisé à modifier ce produit"
+    );
+}
         
         Category category = categoryRepository.findById(productDto.getCategoryId())
             .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée: " + productDto.getCategoryId()));
