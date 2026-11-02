@@ -42,3 +42,22 @@ jobs:
             target/surefire-reports/*.txt
           if-no-files-found: warn
           retention-days: 7
+
+  quality-guardian-api:
+    name: Quality Guardian API Tests (Python 3.14)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Install API dependencies
+        run: python -m pip install -r ai-lab/month-01-quality-guardian/api/requirements.txt
+
+      - name: Run API tests
+        run: python -m pytest ai-lab/month-01-quality-guardian/api/tests/test_api.py -v
